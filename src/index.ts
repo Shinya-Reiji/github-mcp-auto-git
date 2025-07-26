@@ -7,6 +7,7 @@ import { config } from 'dotenv';
 import * as readline from 'readline';
 import { GitOperations } from './core/git-operations.js';
 import { SetupWizard } from './core/setup-wizard.js';
+import { ConstitutionalAIChecker } from './core/constitutional-ai-checker.js';
 import { GitConfig } from './types/index.js';
 
 config();
@@ -535,6 +536,47 @@ async function main(): Promise<void> {
       }
       break;
 
+    case 'constitutional':
+    case 'check':
+      console.log('🏛️ Constitutional AI Checker を実行します...\n');
+      const checker = new ConstitutionalAIChecker();
+      try {
+        const checkResult = await checker.runComprehensiveCheck({
+          files: args.slice(1).filter(arg => !arg.startsWith('-')),
+          operation: 'manual-check',
+          metadata: { manual: true }
+        });
+        
+        console.log('\n📊 Constitutional AI Checker 結果:');
+        console.log(`  総合スコア: ${checkResult.overallScore}/100`);
+        console.log(`  Fail Fast: ${checkResult.principleScores.failFast}/100`);
+        console.log(`  Be Lazy: ${checkResult.principleScores.beLazy}/100`);
+        console.log(`  TypeScript First: ${checkResult.principleScores.typeScriptFirst}/100`);
+        
+        if (checkResult.violations.length > 0) {
+          console.log(`\n⚠️ 検出された違反: ${checkResult.violations.length}件`);
+          checkResult.violations.slice(0, 5).forEach(violation => {
+            console.log(`  • [${violation.severity.toUpperCase()}] ${violation.description}`);
+          });
+          if (checkResult.violations.length > 5) {
+            console.log(`  • ... 他 ${checkResult.violations.length - 5} 件`);
+          }
+        }
+        
+        if (checkResult.recommendations.length > 0) {
+          console.log('\n💡 推奨事項:');
+          checkResult.recommendations.slice(0, 3).forEach(rec => {
+            console.log(`  • ${rec}`);
+          });
+        }
+        
+        console.log(`\n実行時間: ${checkResult.executionTime}ms`);
+        
+      } catch (error) {
+        console.error('❌ Constitutional AI Checker エラー:', error);
+      }
+      break;
+
     default:
       console.log(`
 🚀 GitHub MCP Auto Git System
@@ -546,11 +588,13 @@ async function main(): Promise<void> {
   github-auto-git status        システム状態を表示
   github-auto-git init          設定ファイルを作成
   github-auto-git token         GITHUB_TOKEN設定ガイド表示
+  github-auto-git check [files] 🏛️ Constitutional AI原則チェック実行
 
 サブエージェント機能:
   🛡️ Git Safety Analyzer       機密情報・破壊的変更検出
   📝 Commit Message Generator  非エンジニア向けメッセージ生成
   🔀 PR Management Agent       自動マージ判定・PR管理
+  🏛️ Constitutional AI Checker  3原則（Fail Fast, Be Lazy, TypeScript First）チェック
 
 例:
   # ファイル監視開始（推奨）

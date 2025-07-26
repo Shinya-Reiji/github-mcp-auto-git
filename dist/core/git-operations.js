@@ -8,6 +8,7 @@ import { ErrorRecoverySystem } from './error-recovery.js';
 import { ResilientExecutor } from './resilient-executor.js';
 import { SecurityManager, SecurityLevel } from './security-manager.js';
 import { GitHubMCPClient } from './github-mcp-client.js';
+import { ConstitutionalAIChecker } from './constitutional-ai-checker.js';
 // パッケージ内のエージェントディレクトリを取得
 function getAgentsDirectory() {
     try {
@@ -36,6 +37,7 @@ export class GitOperations {
         this.resilientExecutor = new ResilientExecutor();
         this.securityManager = new SecurityManager();
         this.githubMCP = new GitHubMCPClient(config);
+        this.constitutionalChecker = new ConstitutionalAIChecker(this.projectPath);
     }
     async initialize() {
         try {

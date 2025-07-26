@@ -114,4 +114,5 @@ export interface ProjectContext {
         contributors: string[];
     };
 }
+export * from './constitutional-ai.js';
 //# sourceMappingURL=index.d.ts.map

@@ -125,3 +125,6 @@ export interface ProjectContext {
     contributors: string[];
   };
 }
+
+// Constitutional AI Checker型定義をエクスポート
+export * from './constitutional-ai.js';

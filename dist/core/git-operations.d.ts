@@ -9,6 +9,7 @@ export declare class GitOperations {
     private resilientExecutor;
     private securityManager;
     private githubMCP;
+    private constitutionalChecker;
     constructor(config: GitConfig, projectPath?: string);
     initialize(): Promise<void>;
     analyzeChanges(files?: string[]): Promise<ChangeAnalysis>;
