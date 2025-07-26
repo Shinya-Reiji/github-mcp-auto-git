@@ -2,7 +2,9 @@ import { SubAgent, AgentResult, SafetyAnalysisResult, CommitMessageResult, PRMan
 export declare class SubAgentManager {
     private agentsPath;
     private loadedAgents;
-    constructor(agentsPath?: string);
+    private independentAgents;
+    private workingDir;
+    constructor(agentsPath?: string, workingDir?: string);
     loadAgent(agentName: string): Promise<SubAgent>;
     executeAgent<T>(agentName: string, userPrompt: string, context?: any): Promise<AgentResult>;
     executeParallel<T>(agentExecutions: Array<{

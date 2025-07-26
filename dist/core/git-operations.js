@@ -3,16 +3,40 @@ import { Octokit } from '@octokit/rest';
 import { promises as fs } from 'fs';
 import { join, basename } from 'path';
 import { SubAgentManager } from './subagent-manager.js';
+import { ErrorRecoverySystem } from './error-recovery.js';
+import { ResilientExecutor } from './resilient-executor.js';
+import { SecurityManager, SecurityLevel } from './security-manager.js';
 export class GitOperations {
     constructor(config, projectPath = process.cwd()) {
         this.config = config;
         this.projectPath = projectPath;
         this.git = simpleGit(projectPath);
         this.octokit = new Octokit({ auth: config.github.token });
-        this.subAgentManager = new SubAgentManager(join(projectPath, 'src/agents'));
+        this.subAgentManager = new SubAgentManager(join(projectPath, 'src/agents'), projectPath);
+        this.errorRecovery = new ErrorRecoverySystem();
+        this.resilientExecutor = new ResilientExecutor();
+        this.securityManager = new SecurityManager();
     }
     async initialize() {
         try {
+            // セキュリティ検証: 設定の妥当性チェック
+            const configValidation = this.securityManager.validateInput(this.config, 'object', SecurityLevel.CONFIDENTIAL);
+            if (!configValidation.isValid) {
+                const criticalThreats = configValidation.threats.filter(t => t.severity === 'critical');
+                if (criticalThreats.length > 0) {
+                    throw new Error(`設定にセキュリティ問題があります: ${criticalThreats.map(t => t.description).join(', ')}`);
+                }
+            }
+            // GitHub トークンの検証
+            if (this.config.github.token) {
+                const tokenValidation = await this.securityManager.validateToken(this.config.github.token, 'github');
+                if (!tokenValidation.isValid) {
+                    console.warn('⚠️ GitHub トークンの検証に失敗しました');
+                }
+                else {
+                    console.log(`✅ GitHub トークン検証成功 (権限: ${tokenValidation.permissions.join(', ')})`);
+                }
+            }
             await this.git.init();
             const status = await this.subAgentManager.getAgentStatus();
             if (status.errors.length > 0) {
@@ -21,7 +45,16 @@ export class GitOperations {
             console.log(`✅ Git operations initialized with ${status.available.length} sub-agents`);
         }
         catch (error) {
-            throw new Error(`Failed to initialize Git operations: ${error}`);
+            return await this.errorRecovery.handleError(error, {
+                operation: 'initialize',
+                timestamp: new Date(),
+                workingDir: this.projectPath,
+                attempt: 1
+            }, async () => {
+                // 軽量な初期化のフォールバック
+                console.log('🔧 フォールバック初期化を実行中...');
+                return;
+            });
         }
     }
     async analyzeChanges(files) {
@@ -55,9 +88,54 @@ export class GitOperations {
         }
     }
     async executeGitWorkflow(files, options = {}) {
+        const result = await this.resilientExecutor.execute(async () => this._executeGitWorkflowInternal(files, options), {
+            name: 'git-workflow',
+            workingDir: this.projectPath,
+            files,
+            metadata: { options }
+        }, {
+            maxRetries: 2,
+            timeoutMs: 60000,
+            critical: true,
+            fallbackRequired: true,
+            description: 'Complete Git workflow execution'
+        });
+        if (!result.success) {
+            return {
+                success: false,
+                message: `Git操作が失敗しました: ${result.error?.message}`,
+                details: {},
+                warnings: result.warnings,
+                executionTime: result.executionTime
+            };
+        }
+        return result.data;
+    }
+    async _executeGitWorkflowInternal(files, options = {}) {
         const startTime = Date.now();
         const warnings = [];
         try {
+            // セキュリティ検証: ファイルパスの検証
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    const fileValidation = this.securityManager.validateInput(file, 'string', SecurityLevel.RESTRICTED);
+                    if (!fileValidation.isValid) {
+                        const criticalThreats = fileValidation.threats.filter(t => t.severity === 'critical');
+                        if (criticalThreats.length > 0) {
+                            throw new Error(`ファイルパスにセキュリティ問題があります: ${file} - ${criticalThreats.map(t => t.description).join(', ')}`);
+                        }
+                        warnings.push(`ファイルパス警告: ${file} - ${fileValidation.threats.map(t => t.description).join(', ')}`);
+                    }
+                }
+            }
+            // オプションの検証
+            const optionsValidation = this.securityManager.validateInput(options, 'object', SecurityLevel.INTERNAL);
+            if (!optionsValidation.isValid) {
+                const criticalThreats = optionsValidation.threats.filter(t => t.severity === 'critical');
+                if (criticalThreats.length > 0) {
+                    throw new Error(`オプションにセキュリティ問題があります: ${criticalThreats.map(t => t.description).join(', ')}`);
+                }
+            }
             const status = await this.git.status();
             if (status.isClean() && !files) {
                 return {

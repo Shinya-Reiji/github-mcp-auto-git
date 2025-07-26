@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { IndependentSubAgents } from './independent-subagents.js';
 import { 
   SubAgent, 
   AgentResult, 
@@ -12,9 +13,13 @@ import {
 export class SubAgentManager {
   private agentsPath: string;
   private loadedAgents: Map<string, SubAgent> = new Map();
+  private independentAgents: IndependentSubAgents;
+  private workingDir: string;
 
-  constructor(agentsPath: string = './src/agents') {
+  constructor(agentsPath: string = './src/agents', workingDir: string = process.cwd()) {
     this.agentsPath = agentsPath;
+    this.workingDir = workingDir;
+    this.independentAgents = new IndependentSubAgents();
   }
 
   async loadAgent(agentName: string): Promise<SubAgent> {
@@ -134,13 +139,22 @@ export class SubAgentManager {
     diff: string;
     changes: ChangeAnalysis;
   }): Promise<SafetyAnalysisResult> {
-    const result = await this.executeAgent<SafetyAnalysisResult>(
-      'git-safety-analyzer',
-      `以下の変更内容の安全性を分析してください。機密情報の検出、破壊的変更の確認、ファイルサイズのチェックを行い、安全性スコアと推奨事項を提供してください。`,
-      context
-    );
-
-    return result.result as SafetyAnalysisResult;
+    try {
+      // 高品質な独立実装を使用
+      console.log(`🔍 高品質安全性分析を実行中... (ファイル数: ${context.files.length})`);
+      const result = await this.independentAgents.analyzeSafety(context.files, this.workingDir);
+      console.log(`✅ 安全性分析完了 (スコア: ${result.safetyScore}, レベル: ${result.level})`);
+      return result;
+    } catch (error) {
+      console.warn(`⚠️ 独立分析に失敗、フォールバックを使用: ${error}`);
+      // フォールバックとして既存実装を使用
+      const result = await this.executeAgent<SafetyAnalysisResult>(
+        'git-safety-analyzer',
+        `以下の変更内容の安全性を分析してください。機密情報の検出、破壊的変更の確認、ファイルサイズのチェックを行い、安全性スコアと推奨事項を提供してください。`,
+        context
+      );
+      return result.result as SafetyAnalysisResult;
+    }
   }
 
   async generateCommitMessage(context: {
@@ -148,13 +162,22 @@ export class SubAgentManager {
     diff: string;
     files: string[];
   }): Promise<CommitMessageResult> {
-    const result = await this.executeAgent<CommitMessageResult>(
-      'commit-message-generator',
-      `以下の変更内容に基づいて、非エンジニアにも理解できるコミットメッセージを生成してください。変更の種類、影響範囲、効果を分かりやすく説明してください。`,
-      context
-    );
-
-    return result.result as CommitMessageResult;
+    try {
+      // 高品質な独立実装を使用
+      console.log(`📝 高品質コミットメッセージ生成中... (変更タイプ: ${context.changes.type})`);
+      const result = await this.independentAgents.generateCommitMessage(context.changes, context.files);
+      console.log(`✅ コミットメッセージ生成完了: "${result.title}"`);
+      return result;
+    } catch (error) {
+      console.warn(`⚠️ 独立分析に失敗、フォールバックを使用: ${error}`);
+      // フォールバックとして既存実装を使用
+      const result = await this.executeAgent<CommitMessageResult>(
+        'commit-message-generator',
+        `以下の変更内容に基づいて、非エンジニアにも理解できるコミットメッセージを生成してください。変更の種類、影響範囲、効果を分かりやすく説明してください。`,
+        context
+      );
+      return result.result as CommitMessageResult;
+    }
   }
 
   async managePR(context: {
@@ -164,13 +187,26 @@ export class SubAgentManager {
     branchName: string;
     targetBranch: string;
   }): Promise<PRManagementResult> {
-    const result = await this.executeAgent<PRManagementResult>(
-      'pr-management-agent',
-      `プルリクエストの管理戦略を決定してください。変更内容、安全性分析、コミットメッセージを総合的に判断し、適切なマージ戦略、レビュアー、ラベルを提案してください。`,
-      context
-    );
-
-    return result.result as PRManagementResult;
+    try {
+      // 高品質な独立実装を使用
+      console.log(`🔀 高品質PR管理戦略決定中... (影響度: ${context.changes.impact})`);
+      const result = await this.independentAgents.generatePRManagement(
+        context.changes, 
+        [], // ファイル一覧は changes に含まれているため空配列
+        context.commitMessage.title
+      );
+      console.log(`✅ PR管理戦略決定完了 (自動マージ: ${result.autoMerge})`);
+      return result;
+    } catch (error) {
+      console.warn(`⚠️ 独立分析に失敗、フォールバックを使用: ${error}`);
+      // フォールバックとして既存実装を使用
+      const result = await this.executeAgent<PRManagementResult>(
+        'pr-management-agent',
+        `プルリクエストの管理戦略を決定してください。変更内容、安全性分析、コミットメッセージを総合的に判断し、適切なマージ戦略、レビュアー、ラベルを提案してください。`,
+        context
+      );
+      return result.result as PRManagementResult;
+    }
   }
 
   async executeGitWorkflow(context: {

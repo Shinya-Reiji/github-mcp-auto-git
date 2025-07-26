@@ -5,6 +5,9 @@ export declare class GitOperations {
     private config;
     private subAgentManager;
     private projectPath;
+    private errorRecovery;
+    private resilientExecutor;
+    private securityManager;
     constructor(config: GitConfig, projectPath?: string);
     initialize(): Promise<void>;
     analyzeChanges(files?: string[]): Promise<ChangeAnalysis>;
@@ -15,6 +18,7 @@ export declare class GitOperations {
         autoPush?: boolean;
         createPR?: boolean;
     }): Promise<GitOperationResult>;
+    private _executeGitWorkflowInternal;
     createPullRequest(prManagement: PRManagementResult, branchName: string, targetBranch?: string): Promise<{
         number: number;
         url: string;

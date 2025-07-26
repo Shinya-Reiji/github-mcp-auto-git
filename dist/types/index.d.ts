@@ -22,12 +22,12 @@ export interface SafetyAnalysisResult {
     confidence: number;
 }
 export interface SafetyRisk {
-    type: 'secret_detected' | 'destructive_change' | 'conflict_risk' | 'large_file';
+    type: string;
     severity: 'low' | 'medium' | 'high' | 'critical';
     description: string;
-    file: string;
+    file?: string;
     line?: number;
-    suggestion: string;
+    suggestion?: string;
 }
 export interface CommitMessageResult {
     title: string;

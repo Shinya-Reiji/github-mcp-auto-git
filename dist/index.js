@@ -308,7 +308,9 @@ async function main() {
 import { fileURLToPath } from 'url';
 const currentFile = fileURLToPath(import.meta.url);
 const isMainModule = process.argv[1] &&
-    (currentFile === process.argv[1] || currentFile.endsWith(process.argv[1]));
+    (currentFile === process.argv[1] ||
+        currentFile.endsWith(process.argv[1]) ||
+        process.argv[1].endsWith('github-auto-git')); // グローバルインストール対応
 if (isMainModule) {
     main().catch(error => {
         console.error('❌ 実行中にエラーが発生しました:', error);
