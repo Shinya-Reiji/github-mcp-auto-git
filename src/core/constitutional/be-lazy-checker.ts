@@ -125,8 +125,8 @@ export class BeLazyChecker {
           location: operation,
           type: 'cpu',
           impact: averageExecutionTime > this.config.performanceThreshold * 2 ? 'high' : 'medium',
-          description: `Slow execution time: ${averageExecutionTime}ms (threshold: ${this.config.performanceThreshold}ms)`,
-          solution: 'Optimize algorithm or use caching'
+          description: `実行時間が遅い: ${averageExecutionTime}ms (閾値: ${this.config.performanceThreshold}ms)`,
+          solution: 'アルゴリズムを最適化するかキャッシュを使用してください'
         });
       }
 
@@ -135,19 +135,19 @@ export class BeLazyChecker {
           location: operation,
           type: 'memory',
           impact: memoryUsage > 200 ? 'high' : 'medium',
-          description: `High memory usage: ${memoryUsage}MB`,
-          solution: 'Optimize data structures or implement memory pooling'
+          description: `高メモリ使用量: ${memoryUsage}MB`,
+          solution: 'データ構造を最適化するかメモリプールを実装してください'
         });
       }
 
       // 最適化提案生成
       const optimizationSuggestions = [
         ...(averageExecutionTime > this.config.performanceThreshold ? 
-          ['Consider implementing caching for repeated operations'] : []),
+          ['繰り返し処理にキャッシュの実装を検討してください'] : []),
         ...(bottlenecks.some(b => b.type === 'memory') ? 
-          ['Implement memory optimization strategies'] : []),
+          ['メモリ最適化戦略を実装してください'] : []),
         ...(bottlenecks.some(b => b.type === 'cpu') ? 
-          ['Profile and optimize CPU-intensive operations'] : [])
+          ['CPU集約的な処理をプロファイリングして最適化してください'] : [])
       ];
 
       // スコア計算（100点満点）
@@ -247,9 +247,9 @@ export class BeLazyChecker {
       const potentialSavings = Math.round(totalWastedTime * 0.8); // 80% savings potential
 
       const recommendations = [
-        ...(duplicates.length > 0 ? ['Implement caching for frequently called operations'] : []),
-        ...(totalWastedTime > 1000 ? ['Consider implementing a centralized operation manager'] : []),
-        ...(duplicates.some(d => d.occurrences > 10) ? ['High-frequency operations should be optimized first'] : [])
+        ...(duplicates.length > 0 ? ['頻繁に呼び出される処理にキャッシュを実装してください'] : []),
+        ...(totalWastedTime > 1000 ? ['一元化された処理管理の実装を検討してください'] : []),
+        ...(duplicates.some(d => d.occurrences > 10) ? ['高頻度処理を最初に最適化すべきです'] : [])
       ];
 
       return {
@@ -389,10 +389,10 @@ export class BeLazyChecker {
       }
 
       const recommendations = [
-        ...(cacheHitRate < 0.8 ? ['Implement or improve caching strategy'] : []),
-        ...(missedOpportunities.length > 0 ? ['Cache frequently repeated operations'] : []),
+        ...(cacheHitRate < 0.8 ? ['キャッシュ戦略を実装または改善してください'] : []),
+        ...(missedOpportunities.length > 0 ? ['頻繁に繰り返される処理をキャッシュしてください'] : []),
         ...(missedOpportunities.some(m => m.cacheability === 'high') ? 
-          ['High-frequency operations should be cached immediately'] : [])
+          ['高頻度処理は即座にキャッシュすべきです'] : [])
       ];
 
       const score = Math.round(cacheHitRate * 100);

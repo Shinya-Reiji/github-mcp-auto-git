@@ -105,7 +105,7 @@ export class FailFastChecker {
       if (!operation) {
         errors.push({
           code: 'MISSING_OPERATION',
-          message: 'Operation name is required',
+          message: '操作名が必要です',
           severity: 'high'
         });
       }
@@ -116,13 +116,13 @@ export class FailFastChecker {
           if (!file || typeof file !== 'string') {
             errors.push({
               code: 'INVALID_FILE_PATH',
-              message: `Invalid file path: ${file}`,
+              message: `無効なファイルパス: ${file}`,
               severity: 'medium'
             });
           } else if (file.includes('..')) {
             errors.push({
               code: 'PATH_TRAVERSAL_RISK',
-              message: `Potential path traversal in: ${file}`,
+              message: `パストラバーサル攻撃のリスク: ${file}`,
               filePath: file,
               severity: 'critical'
             });
@@ -135,7 +135,7 @@ export class FailFastChecker {
         if (typeof input.metadata !== 'object') {
           errors.push({
             code: 'INVALID_METADATA',
-            message: 'Metadata must be an object',
+            message: 'メタデータはオブジェクトである必要があります',
             severity: 'medium'
           });
         }
@@ -143,7 +143,7 @@ export class FailFastChecker {
 
       // 環境変数検証
       if (operation.includes('github') && !process.env.GITHUB_TOKEN) {
-        warnings.push('GITHUB_TOKEN not set - GitHub operations may fail');
+        warnings.push('GITHUB_TOKENが設定されていません - GitHub操作が失敗する可能性があります');
       }
 
       return {
@@ -156,7 +156,7 @@ export class FailFastChecker {
     } catch (error) {
       errors.push({
         code: 'VALIDATION_ERROR',
-        message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `バリデーション失敗: ${error instanceof Error ? error.message : '不明なエラー'}`,
         severity: 'critical'
       });
 
@@ -179,7 +179,7 @@ export class FailFastChecker {
     if (systemState.memory.percentage > 90) {
       anomalies.push({
         type: 'memory',
-        description: `High memory usage: ${systemState.memory.percentage}%`,
+        description: `高メモリ使用量: ${systemState.memory.percentage}%`,
         severity: 'critical',
         detectedAt: new Date(),
         context: { memoryUsage: systemState.memory }
@@ -187,7 +187,7 @@ export class FailFastChecker {
     } else if (systemState.memory.percentage > 75) {
       anomalies.push({
         type: 'memory',
-        description: `Elevated memory usage: ${systemState.memory.percentage}%`,
+        description: `メモリ使用量上昇: ${systemState.memory.percentage}%`,
         severity: 'medium',
         detectedAt: new Date(),
         context: { memoryUsage: systemState.memory }
@@ -198,7 +198,7 @@ export class FailFastChecker {
     if (systemState.cpu.usage > 95) {
       anomalies.push({
         type: 'performance',
-        description: `Very high CPU usage: ${systemState.cpu.usage}%`,
+        description: `非常に高いCPU使用量: ${systemState.cpu.usage}%`,
         severity: 'critical',
         detectedAt: new Date(),
         context: { cpuUsage: systemState.cpu }
@@ -209,7 +209,7 @@ export class FailFastChecker {
     if (systemState.errors.recent > 10) {
       anomalies.push({
         type: 'error',
-        description: `High error frequency: ${systemState.errors.recent} recent errors`,
+        description: `高エラー頻度: ${systemState.errors.recent}件の最近のエラー`,
         severity: 'high',
         detectedAt: new Date(),
         context: { errorStats: systemState.errors }
@@ -219,7 +219,7 @@ export class FailFastChecker {
     if (systemState.errors.critical > 0) {
       anomalies.push({
         type: 'error',
-        description: `Critical errors detected: ${systemState.errors.critical}`,
+        description: `クリティカルエラー検出: ${systemState.errors.critical}件`,
         severity: 'critical',
         detectedAt: new Date(),
         context: { errorStats: systemState.errors }
@@ -230,7 +230,7 @@ export class FailFastChecker {
     if (systemState.performance.averageResponseTime > 5000) {
       anomalies.push({
         type: 'performance',
-        description: `Slow response time: ${systemState.performance.averageResponseTime}ms`,
+        description: `応答時間遅延: ${systemState.performance.averageResponseTime}ms`,
         severity: 'medium',
         detectedAt: new Date(),
         context: { performance: systemState.performance }
@@ -243,13 +243,13 @@ export class FailFastChecker {
     const recommendations = anomalies.map(anomaly => {
       switch (anomaly.type) {
         case 'memory':
-          return 'Consider increasing memory allocation or optimizing memory usage';
+          return 'メモリ割り当てを増やすか、メモリ使用量を最適化することを検討してください';
         case 'performance':
-          return 'Investigate performance bottlenecks and optimize critical paths';
+          return 'パフォーマンスボトルネックを調査し、クリティカルパスを最適化してください';
         case 'error':
-          return 'Review and fix recurring errors to improve system stability';
+          return '繰り返し発生するエラーを確認・修正して、システム安定性を向上させてください';
         default:
-          return 'Monitor system closely and consider preventive measures';
+          return 'システムを注意深く監視し、予防措置を検討してください';
       }
     });
 
@@ -378,17 +378,17 @@ export class FailFastChecker {
       if (!boundary.validated) {
         violations.push({
           boundary: boundary.name,
-          issue: 'Validation not implemented',
+          issue: 'バリデーションが実装されていません',
           severity: 'high',
-          recommendation: `Implement validation for ${boundary.name} boundary`
+          recommendation: `${boundary.name}境界のバリデーションを実装してください`
         });
       }
       if (!boundary.sanitized) {
         violations.push({
           boundary: boundary.name,
-          issue: 'Sanitization not implemented',
+          issue: 'サニタイゼーションが実装されていません',
           severity: 'medium',
-          recommendation: `Implement sanitization for ${boundary.name} boundary`
+          recommendation: `${boundary.name}境界のサニタイゼーションを実装してください`
         });
       }
     }
