@@ -5,6 +5,7 @@ import { watch } from 'chokidar';
 import { config } from 'dotenv';
 import * as readline from 'readline';
 import { GitOperations } from './core/git-operations.js';
+import { SetupWizard } from './core/setup-wizard.js';
 config();
 class GitAutoMCP {
     constructor(configPath) {
@@ -266,9 +267,24 @@ class GitAutoMCP {
         rl.close();
     }
     askQuestion(rl, question) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            let isCompleted = false;
+            const cleanup = () => {
+                if (!isCompleted) {
+                    isCompleted = true;
+                }
+            };
             rl.question(question, (answer) => {
-                resolve(answer.trim());
+                if (!isCompleted) {
+                    cleanup();
+                    resolve(answer.trim());
+                }
+            });
+            rl.on('error', (error) => {
+                if (!isCompleted) {
+                    cleanup();
+                    reject(error);
+                }
             });
         });
     }
@@ -345,15 +361,95 @@ async function main() {
             try {
                 await fs.writeFile(configPath, configTemplate);
                 console.log(`✅ 設定ファイルを作成しました: ${configPath}`);
-                console.log('💡 .env ファイルに以下の環境変数を設定してください:');
-                console.log('  GITHUB_OWNER=your-username');
-                console.log('  GITHUB_REPO=your-repo');
-                console.log('  GITHUB_TOKEN=your-token');
-                console.log('');
-                console.log('💡 注意: OpenAI APIキーは不要です（Claude Codeサブエージェント機能を使用）');
+                // 詳細なGITHUB_TOKEN設定ガイド
+                console.log('\n🔧 GITHUB_TOKEN 設定ガイド');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('\n📋 ステップ1: GitHubでPersonal Access Tokenを作成');
+                console.log('   1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)');
+                console.log('   2. "Generate new token (classic)" をクリック');
+                console.log('   3. Note: "GitHub MCP Auto Git System" など分かりやすい名前');
+                console.log('   4. 必要な権限を選択:');
+                console.log('      ✅ repo (リポジトリ全体へのアクセス)');
+                console.log('      ✅ workflow (GitHub Actionsワークフロー)');
+                console.log('      ✅ write:packages (パッケージ書き込み、オプション)');
+                console.log('   5. "Generate token" をクリックして保存');
+                console.log('\n📋 ステップ2: 環境変数を設定');
+                console.log('   プロジェクトルートに .env ファイルを作成:');
+                console.log('   ');
+                console.log('   GITHUB_OWNER=your-username     # GitHubユーザー名');
+                console.log('   GITHUB_REPO=your-repository    # リポジトリ名');
+                console.log('   GITHUB_TOKEN=ghp_xxxxxxxxxxxx  # 作成したトークン');
+                console.log('   ');
+                console.log('📋 ステップ3: 動作確認');
+                console.log('   github-auto-git status で設定確認');
+                console.log('   GITHUB_TOKEN警告が消えれば設定完了');
+                console.log('\n🔒 セキュリティ注意事項:');
+                console.log('   • .env ファイルを .gitignore に追加してください');
+                console.log('   • トークンは他人と共有しないでください');
+                console.log('   • 不要になったら GitHub でトークンを削除してください');
+                console.log('\n💡 その他:');
+                console.log('   • OpenAI APIキーは不要です（Claude Codeサブエージェント機能を使用）');
+                console.log('   • GITHUB_TOKENがない場合でもローカルGit操作は可能です');
+                console.log('   • PR作成・マージ機能のみトークンが必要です');
+                console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             }
             catch (error) {
                 console.error('❌ 設定ファイルの作成に失敗しました:', error);
+            }
+            break;
+        case 'token':
+        case 'setup-token':
+            console.log('\n🔧 GITHUB_TOKEN 設定ガイド');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('\n📋 ステップ1: GitHubでPersonal Access Tokenを作成');
+            console.log('   1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)');
+            console.log('   2. "Generate new token (classic)" をクリック');
+            console.log('   3. Note: "GitHub MCP Auto Git System" など分かりやすい名前');
+            console.log('   4. 必要な権限を選択:');
+            console.log('      ✅ repo (リポジトリ全体へのアクセス)');
+            console.log('      ✅ workflow (GitHub Actionsワークフロー)');
+            console.log('      ✅ write:packages (パッケージ書き込み、オプション)');
+            console.log('   5. "Generate token" をクリックして保存');
+            console.log('\n📋 ステップ2: 環境変数を設定');
+            console.log('   プロジェクトルートに .env ファイルを作成:');
+            console.log('   ');
+            console.log('   GITHUB_OWNER=your-username     # GitHubユーザー名');
+            console.log('   GITHUB_REPO=your-repository    # リポジトリ名');
+            console.log('   GITHUB_TOKEN=ghp_xxxxxxxxxxxx  # 作成したトークン');
+            console.log('   ');
+            console.log('📋 ステップ3: 動作確認');
+            console.log('   github-auto-git status で設定確認');
+            console.log('   GITHUB_TOKEN警告が消えれば設定完了');
+            console.log('\n🔒 セキュリティ注意事項:');
+            console.log('   • .env ファイルを .gitignore に追加してください');
+            console.log('   • トークンは他人と共有しないでください');
+            console.log('   • 不要になったら GitHub でトークンを削除してください');
+            console.log('\n💡 その他:');
+            console.log('   • OpenAI APIキーは不要です（Claude Codeサブエージェント機能を使用）');
+            console.log('   • GITHUB_TOKENがない場合でもローカルGit操作は可能です');
+            console.log('   • PR作成・マージ機能のみトークンが必要です');
+            console.log('\n🌐 参考リンク:');
+            console.log('   • GitHub Personal Access Token作成: https://github.com/settings/tokens');
+            console.log('   • GitHub docs: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token');
+            console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            break;
+        case 'setup':
+        case 'wizard':
+            console.log('🧙‍♂️ セットアップウィザードを開始します...\n');
+            const wizard = new SetupWizard();
+            try {
+                const result = await wizard.run();
+                if (result.success) {
+                    console.log('\n🎉 セットアップが正常に完了しました！');
+                    console.log('github-auto-git watch でファイル監視を開始できます。');
+                }
+                else {
+                    console.log('\n❌ セットアップに失敗しました。');
+                    console.log('手動設定を行うか、github-auto-git init を試してください。');
+                }
+            }
+            catch (error) {
+                console.error('❌ ウィザード実行エラー:', error);
             }
             break;
         default:
@@ -361,10 +457,12 @@ async function main() {
 🚀 GitHub MCP Auto Git System
 
 使用方法:
+  github-auto-git setup         🧙‍♂️ インタラクティブセットアップウィザード（推奨）
   github-auto-git watch         ファイル監視を開始
   github-auto-git commit [files] 手動でGit操作実行
   github-auto-git status        システム状態を表示
   github-auto-git init          設定ファイルを作成
+  github-auto-git token         GITHUB_TOKEN設定ガイド表示
 
 サブエージェント機能:
   🛡️ Git Safety Analyzer       機密情報・破壊的変更検出

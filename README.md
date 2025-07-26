@@ -12,6 +12,9 @@
 - **📝 メッセージ生成**: 非エンジニアにも分かりやすいコミットメッセージを自動作成
 - **🔀 プルリクエスト管理**: 適切なマージ戦略を自動判定
 - **⚡ 並列処理**: 3つのAIエージェントが同時に作業
+- **🧙‍♂️ セットアップウィザード**: インタラクティブな初期設定ガイド
+- **🔧 Claude Code最適化**: 適応的タイムアウトとパフォーマンス追跡
+- **🌐 GitHub MCP統合**: 高度なGitHub操作をMCPプロトコル経由で実行
 
 ### 💡 誰に役立つか
 - **個人開発者**: 面倒なGit操作から解放
@@ -63,13 +66,21 @@ npm link  # グローバルにリンク
 ```
 
 ### 2. 初期設定
+
+#### オプション A: セットアップウィザード（推奨）
 ```bash
 # プロジェクトフォルダで実行
 cd your-project
-github-auto-git init
+github-auto-git setup  # 🧙‍♂️ インタラクティブガイド
 ```
 
-これで `git-auto-mcp.config.js` と `.env.example` が作成されます。
+ウィザードが全ての設定を案内してくれます！
+
+#### オプション B: 手動設定
+```bash
+# 従来の方法
+github-auto-git init
+```
 
 ### 3. 環境変数設定（オプション）
 プルリクエスト機能を使いたい場合のみ：
@@ -83,6 +94,8 @@ GITHUB_OWNER=あなたのGitHubユーザー名
 GITHUB_REPO=リポジトリ名
 GITHUB_TOKEN=GitHubトークン
 ```
+
+> 💡 **詳細なGITHUB_TOKEN設定方法**: `github-auto-git token` コマンドで詳しいガイドを表示できます。
 
 > 💡 **重要**: OpenAI APIキーは不要です！Claude Codeの組み込み機能を使用します。
 
@@ -99,10 +112,12 @@ github-auto-git watch
 
 | コマンド | 説明 | 使用例 |
 |---------|------|--------|
+| `setup` | 🧙‍♂️ **インタラクティブセットアップウィザード（初回推奨）** | `github-auto-git setup` |
 | `watch` | ⭐ **ファイル監視を開始（推奨・メイン機能）** | `github-auto-git watch` |
 | `commit` | 手動でGit操作実行 | `github-auto-git commit` |
 | `commit [files]` | 特定ファイルのみコミット | `github-auto-git commit src/app.js` |
 | `status` | システム状態を表示 | `github-auto-git status` |
+| `token` | GITHUB_TOKEN設定ガイド表示 | `github-auto-git token` |
 | `init` | 設定ファイルを作成 | `github-auto-git init` |
 
 ## 🤖 サブエージェント機能
@@ -221,6 +236,23 @@ paths: [
 - **🟡 WARNING (60-84点)**: 注意確認後に実行
 - **🔴 DANGER (0-59点)**: 実行停止、手動確認必須
 
+## ⚡ パフォーマンス最適化
+
+### 適応的タイムアウト機能
+- **学習機能**: 実行履歴から最適なタイムアウト時間を自動計算
+- **優先度管理**: critical/high/medium/low レベルでリソース割り当て
+- **リトライ最適化**: 段階的タイムアウト延長 (1.0x → 1.5x → 2.0x)
+
+### Claude Code統合最適化
+- **環境検出**: Claude Code実行時の自動最適化
+- **メモリ管理**: 大量ファイル処理時のガベージコレクション
+- **バッチ処理**: 50ファイル以上の効率的な並列処理
+
+### パフォーマンス統計
+- **実行時間追跡**: 各操作の平均実行時間を記録
+- **システム健全性**: optimal/good/warning/critical レベルでの監視
+- **定期メンテナンス**: 古いログとパフォーマンス履歴の自動クリーンアップ
+
 ## 🤝 チーム開発での活用
 
 ### メリット
@@ -267,9 +299,16 @@ ls src/agents/
 
 #### ❓ GitHub連携ができない
 ```bash
-# 解決方法：トークン設定確認
+# 解決方法1：詳細なトークン設定ガイド表示
+github-auto-git token
+
+# 解決方法2：トークン設定確認
 echo $GITHUB_TOKEN
 # または .envファイルの内容確認
+
+# 解決方法3：権限確認
+# GitHub → Settings → Developer settings → Personal access tokens
+# 必要な権限：repo, workflow, write:packages（オプション）
 ```
 
 #### ❓ 監視が動作しない

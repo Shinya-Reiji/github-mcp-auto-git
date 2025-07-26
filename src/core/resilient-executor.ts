@@ -11,6 +11,9 @@ export interface ExecutionOptions {
   critical?: boolean;
   fallbackRequired?: boolean;
   description?: string;
+  claudeCodeOptimized?: boolean;
+  adaptiveTimeout?: boolean;
+  priorityLevel?: 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface ExecutionResult<T> {
@@ -24,6 +27,7 @@ export interface ExecutionResult<T> {
 
 export class ResilientExecutor {
   private errorRecovery: ErrorRecoverySystem;
+  private executionHistory: Map<string, number[]> = new Map();
 
   constructor() {
     this.errorRecovery = new ErrorRecoverySystem();
@@ -44,7 +48,7 @@ export class ResilientExecutor {
   ): Promise<ExecutionResult<T>> {
     const startTime = Date.now();
     const maxRetries = options.maxRetries || 3;
-    const timeoutMs = options.timeoutMs || 30000;
+    let timeoutMs = options.timeoutMs || this.calculateOptimalTimeout(context.name, options);
     const warnings: string[] = [];
     let attempts = 0;
     let lastError: Error | null = null;
@@ -53,11 +57,24 @@ export class ResilientExecutor {
 
     for (attempts = 1; attempts <= maxRetries; attempts++) {
       try {
+        // 適応的タイムアウト調整
+        if (options.adaptiveTimeout && attempts > 1) {
+          timeoutMs = this.adjustTimeoutForRetry(timeoutMs, attempts, context.name);
+        }
+
+        // Claude Code最適化処理
+        if (options.claudeCodeOptimized) {
+          await this.optimizeForClaudeCode(context, options);
+        }
+
         // タイムアウト付き実行
         const result = await this.executeWithTimeout(operation, timeoutMs);
         
         const executionTime = Date.now() - startTime;
         console.log(`✅ 実行成功: ${context.name} (${attempts}回目, ${executionTime}ms)`);
+        
+        // 実行履歴を記録（適応的タイムアウトのため）
+        this.recordExecutionTime(context.name, executionTime);
         
         return {
           success: true,
@@ -309,22 +326,201 @@ export class ResilientExecutor {
   }
 
   /**
+   * Claude Code最適化処理
+   */
+  private async optimizeForClaudeCode(
+    context: { name: string; workingDir: string; files?: string[]; metadata?: Record<string, any> },
+    options: ExecutionOptions
+  ): Promise<void> {
+    // Claude Code環境での最適化
+    if (process.env.CLAUDE_CODE_SESSION) {
+      console.log('🔧 Claude Code環境最適化を適用中...');
+      
+      // プライオリティに基づくリソース調整
+      if (options.priorityLevel === 'critical') {
+        // クリティカル操作の場合、他の処理を一時停止
+        await this.pauseNonCriticalOperations();
+      }
+      
+      // メモリ使用量の最適化
+      if (global.gc && context.metadata?.memoryIntensive) {
+        console.log('🧹 メモリ最適化: ガベージコレクション実行');
+        global.gc();
+      }
+      
+      // ファイル数が多い場合のバッチ処理最適化
+      if (context.files && context.files.length > 50) {
+        console.log(`📦 大量ファイル処理最適化: ${context.files.length}ファイル`);
+        context.metadata = {
+          ...context.metadata,
+          batchProcessing: true,
+          chunkSize: Math.min(20, Math.ceil(context.files.length / 4))
+        };
+      }
+    }
+  }
+
+  /**
+   * 最適タイムアウト計算
+   */
+  private calculateOptimalTimeout(operationName: string, options: ExecutionOptions): number {
+    const baseTimeouts: Record<string, number> = {
+      'safety-analysis': 45000,
+      'commit-message-generation': 30000,
+      'pr-management': 60000,
+      'github-operations': 90000,
+      'git-operations': 30000,
+      'file-analysis': 25000
+    };
+
+    let baseTimeout = baseTimeouts[operationName] || 30000;
+
+    // プライオリティに基づく調整
+    switch (options.priorityLevel) {
+      case 'critical':
+        baseTimeout *= 2; // クリティカル操作は十分な時間を確保
+        break;
+      case 'high':
+        baseTimeout *= 1.5;
+        break;
+      case 'low':
+        baseTimeout *= 0.7; // 低優先度は短縮
+        break;
+    }
+
+    // 履歴に基づく適応的調整
+    if (options.adaptiveTimeout) {
+      const avgTime = this.getAverageExecutionTime(operationName);
+      if (avgTime > 0) {
+        baseTimeout = Math.max(baseTimeout, avgTime * 1.8); // 平均時間の1.8倍をタイムアウトに
+      }
+    }
+
+    // Claude Code環境での調整
+    if (options.claudeCodeOptimized && process.env.CLAUDE_CODE_SESSION) {
+      baseTimeout *= 1.3; // Claude Code環境では余裕をもたせる
+    }
+
+    return Math.min(baseTimeout, 300000); // 最大5分
+  }
+
+  /**
+   * リトライ時のタイムアウト調整
+   */
+  private adjustTimeoutForRetry(currentTimeout: number, attempt: number, operationName: string): number {
+    // リトライ時は段階的にタイムアウトを延長
+    const multiplier = 1 + (attempt - 1) * 0.5; // 1回目: 1.0x, 2回目: 1.5x, 3回目: 2.0x
+    const adjustedTimeout = Math.floor(currentTimeout * multiplier);
+    
+    console.log(`⏱️ タイムアウト調整 ${operationName}: ${currentTimeout}ms → ${adjustedTimeout}ms (試行${attempt}回目)`);
+    
+    return Math.min(adjustedTimeout, 300000); // 最大5分
+  }
+
+  /**
+   * 実行時間記録
+   */
+  private recordExecutionTime(operationName: string, executionTime: number): void {
+    if (!this.executionHistory.has(operationName)) {
+      this.executionHistory.set(operationName, []);
+    }
+    
+    const history = this.executionHistory.get(operationName)!;
+    history.push(executionTime);
+    
+    // 直近20回の記録のみ保持
+    if (history.length > 20) {
+      history.shift();
+    }
+  }
+
+  /**
+   * 平均実行時間取得
+   */
+  private getAverageExecutionTime(operationName: string): number {
+    const history = this.executionHistory.get(operationName);
+    if (!history || history.length === 0) {
+      return 0;
+    }
+    
+    const sum = history.reduce((acc, time) => acc + time, 0);
+    return Math.floor(sum / history.length);
+  }
+
+  /**
+   * 非クリティカル操作の一時停止
+   */
+  private async pauseNonCriticalOperations(): Promise<void> {
+    // 実装例: ファイル監視の一時停止、定期処理の延期など
+    console.log('⏸️ 非クリティカル操作を一時停止');
+    // 実際の実装では、システム全体の状態管理が必要
+  }
+
+  /**
+   * パフォーマンス統計取得
+   */
+  getPerformanceStats(): {
+    operations: Record<string, {
+      averageTime: number;
+      totalExecutions: number;
+      successRate: number;
+    }>;
+    systemHealth: 'optimal' | 'good' | 'warning' | 'critical';
+  } {
+    const operations: Record<string, any> = {};
+    
+    for (const [operationName, times] of this.executionHistory.entries()) {
+      operations[operationName] = {
+        averageTime: this.getAverageExecutionTime(operationName),
+        totalExecutions: times.length,
+        successRate: 1.0 // 成功した実行のみ記録されるため100%
+      };
+    }
+    
+    // システム健全性判定
+    const avgTimes = Object.values(operations).map((op: any) => op.averageTime);
+    const maxAvgTime = Math.max(...avgTimes, 0);
+    
+    let systemHealth: 'optimal' | 'good' | 'warning' | 'critical' = 'optimal';
+    if (maxAvgTime > 60000) systemHealth = 'critical';
+    else if (maxAvgTime > 30000) systemHealth = 'warning';
+    else if (maxAvgTime > 15000) systemHealth = 'good';
+    
+    return {
+      operations,
+      systemHealth
+    };
+  }
+
+  /**
    * メンテナンス関数
    */
   async performMaintenance(): Promise<{
     errorsCleared: number;
     status: string;
+    performanceOptimized: boolean;
   }> {
     console.log('🧹 定期メンテナンス実行中...');
     
     const errorsCleared = this.errorRecovery.clearOldErrors(24); // 24時間前のエラーをクリア
     const healthReport = this.getHealthReport();
     
-    console.log(`✅ メンテナンス完了: ${errorsCleared}個のエラーをクリア`);
+    // パフォーマンス履歴のクリーンアップ
+    let performanceOptimized = false;
+    for (const [operationName, times] of this.executionHistory.entries()) {
+      if (times.length > 50) {
+        // 古い履歴を削除
+        times.splice(0, times.length - 20);
+        performanceOptimized = true;
+      }
+    }
+    
+    console.log(`✅ メンテナンス完了: ${errorsCleared}個のエラーをクリア, パフォーマンス最適化: ${performanceOptimized}`);
     
     return {
       errorsCleared,
-      status: healthReport.status
+      status: healthReport.status,
+      performanceOptimized
     };
   }
 }

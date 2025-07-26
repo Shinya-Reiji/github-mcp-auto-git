@@ -8,6 +8,7 @@ export declare class GitOperations {
     private errorRecovery;
     private resilientExecutor;
     private securityManager;
+    private githubMCP;
     constructor(config: GitConfig, projectPath?: string);
     initialize(): Promise<void>;
     analyzeChanges(files?: string[]): Promise<ChangeAnalysis>;
@@ -23,6 +24,14 @@ export declare class GitOperations {
         number: number;
         url: string;
     }>;
+    /**
+     * PR設定（ラベル、レビュアー、自動マージ）の適用
+     */
+    private configurePullRequestSettings;
+    /**
+     * MCP対応の自動マージ試行
+     */
+    attemptAutoMergeMCP(prNumber: number, mergeStrategy?: 'squash' | 'merge' | 'rebase'): Promise<boolean>;
     attemptAutoMerge(prNumber: number, mergeStrategy?: 'squash' | 'merge' | 'rebase'): Promise<boolean>;
     getProjectContext(): Promise<ProjectContext>;
     private getCurrentBranch;

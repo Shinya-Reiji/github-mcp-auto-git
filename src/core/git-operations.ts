@@ -1,7 +1,8 @@
 import simpleGit, { SimpleGit, StatusResult, DiffResult } from 'simple-git';
 import { Octokit } from '@octokit/rest';
 import { promises as fs } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { 
   GitOperationResult, 
   GitConfig, 
@@ -15,6 +16,26 @@ import { SubAgentManager } from './subagent-manager.js';
 import { ErrorRecoverySystem, ErrorCategory, ErrorLevel } from './error-recovery.js';
 import { ResilientExecutor, ExecutionOptions } from './resilient-executor.js';
 import { SecurityManager, SecurityLevel, ValidationResult } from './security-manager.js';
+import { GitHubMCPClient, MCPPullRequestOptions, MCPMergeOptions } from './github-mcp-client.js';
+
+// パッケージ内のエージェントディレクトリを取得
+function getAgentsDirectory(): string {
+  try {
+    // __filename の代替として import.meta.url を使用
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    
+    // パッケージルートから agents ディレクトリを探す
+    const packageRoot = join(__dirname, '..', '..');
+    const agentsPath = join(packageRoot, 'src', 'agents');
+    
+    return agentsPath;
+  } catch (error) {
+    // フォールバック: 従来の相対パス
+    console.warn('⚠️ Could not determine package agents directory, using fallback');
+    return './src/agents';
+  }
+}
 
 export class GitOperations {
   private git: SimpleGit;
@@ -25,6 +46,7 @@ export class GitOperations {
   private errorRecovery: ErrorRecoverySystem;
   private resilientExecutor: ResilientExecutor;
   private securityManager: SecurityManager;
+  private githubMCP: GitHubMCPClient;
 
   constructor(config: GitConfig, projectPath: string = process.cwd()) {
     this.config = config;
@@ -32,12 +54,13 @@ export class GitOperations {
     this.git = simpleGit(projectPath);
     this.octokit = new Octokit({ auth: config.github.token });
     this.subAgentManager = new SubAgentManager(
-      join(projectPath, 'src/agents'),
+      getAgentsDirectory(),
       projectPath
     );
     this.errorRecovery = new ErrorRecoverySystem();
     this.resilientExecutor = new ResilientExecutor();
     this.securityManager = new SecurityManager();
+    this.githubMCP = new GitHubMCPClient(config);
   }
 
   async initialize(): Promise<void> {
@@ -78,6 +101,16 @@ export class GitOperations {
       }
       
       console.log(`✅ Git operations initialized with ${status.available.length} sub-agents`);
+      
+      // GitHub MCP クライアントの初期化（トークンがある場合のみ）
+      if (this.config.github.token) {
+        try {
+          await this.githubMCP.initialize();
+          console.log(`✅ GitHub MCP クライアント初期化完了`);
+        } catch (error) {
+          console.warn('⚠️ GitHub MCP クライアント初期化に失敗（フォールバックモードで継続）:', error);
+        }
+      }
     } catch (error) {
       return await this.errorRecovery.handleError(
         error as Error,
@@ -153,7 +186,10 @@ export class GitOperations {
         timeoutMs: 60000,
         critical: true,
         fallbackRequired: true,
-        description: 'Complete Git workflow execution'
+        description: 'Complete Git workflow execution',
+        claudeCodeOptimized: true,
+        adaptiveTimeout: true,
+        priorityLevel: 'high'
       }
     );
 
@@ -325,6 +361,36 @@ export class GitOperations {
     targetBranch: string = 'main'
   ): Promise<{ number: number; url: string }> {
     try {
+      // GitHub MCP クライアントを優先使用
+      if (this.githubMCP.isConnected) {
+        console.log('🔗 GitHub MCP経由でPR作成中...');
+        
+        const mcpResult = await this.githubMCP.createPullRequest({
+          title: prManagement.prTitle,
+          body: prManagement.prBody,
+          head: branchName,
+          base: targetBranch,
+          draft: false,
+          maintainer_can_modify: true
+        });
+
+        if (mcpResult.success && mcpResult.data) {
+          const prNumber = mcpResult.data.number;
+          
+          // ラベルとレビュアーの設定はOctokitでフォローアップ
+          await this.configurePullRequestSettings(prNumber, prManagement);
+          
+          return {
+            number: prNumber,
+            url: mcpResult.data.url
+          };
+        } else {
+          console.warn('⚠️ MCP PR作成失敗、Octokitでフォールバック:', mcpResult.error);
+        }
+      }
+      
+      // フォールバック: 従来のOctokit方式
+      console.log('🔗 Octokit経由でPR作成中...');
       const response = await this.octokit.rest.pulls.create({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
@@ -335,7 +401,29 @@ export class GitOperations {
       });
 
       const prNumber = response.data.number;
+      
+      // PR設定の適用
+      await this.configurePullRequestSettings(prNumber, prManagement);
 
+      return {
+        number: prNumber,
+        url: response.data.html_url
+      };
+
+    } catch (error) {
+      throw new Error(`Failed to create pull request: ${error}`);
+    }
+  }
+
+  /**
+   * PR設定（ラベル、レビュアー、自動マージ）の適用
+   */
+  private async configurePullRequestSettings(
+    prNumber: number, 
+    prManagement: PRManagementResult
+  ): Promise<void> {
+    try {
+      // ラベルの追加
       if (prManagement.labels.length > 0) {
         await this.octokit.rest.issues.addLabels({
           owner: this.config.github.owner,
@@ -345,6 +433,7 @@ export class GitOperations {
         });
       }
 
+      // レビュアーの追加
       if (prManagement.reviewers.length > 0) {
         await this.octokit.rest.pulls.requestReviewers({
           owner: this.config.github.owner,
@@ -354,6 +443,7 @@ export class GitOperations {
         });
       }
 
+      // アサインの追加
       if (prManagement.assignees.length > 0) {
         await this.octokit.rest.issues.addAssignees({
           owner: this.config.github.owner,
@@ -363,23 +453,78 @@ export class GitOperations {
         });
       }
 
+      // 自動マージのスケジュール
       if (prManagement.autoMerge) {
         setTimeout(async () => {
           try {
-            await this.attemptAutoMerge(prNumber, prManagement.mergeStrategy);
+            await this.attemptAutoMergeMCP(prNumber, prManagement.mergeStrategy);
           } catch (error) {
             console.warn(`自動マージに失敗しました: ${error}`);
           }
         }, 30000); // 30秒後に自動マージを試行
       }
-
-      return {
-        number: prNumber,
-        url: response.data.html_url
-      };
-
     } catch (error) {
-      throw new Error(`Failed to create pull request: ${error}`);
+      console.warn('⚠️ PR設定の一部に失敗しました:', error);
+    }
+  }
+
+  /**
+   * MCP対応の自動マージ試行
+   */
+  async attemptAutoMergeMCP(
+    prNumber: number,
+    mergeStrategy: 'squash' | 'merge' | 'rebase' = 'squash'
+  ): Promise<boolean> {
+    try {
+      console.log(`🔀 PR #${prNumber} の自動マージを試行中...`);
+      
+      // GitHub MCP クライアントを優先使用
+      if (this.githubMCP.isConnected) {
+        console.log('🔗 MCP経由でPR状態確認中...');
+        
+        const statusResult = await this.githubMCP.getPullRequestStatus(prNumber);
+        if (!statusResult.success) {
+          console.warn('⚠️ MCP PR状態確認失敗、Octokitでフォールバック');
+          return await this.attemptAutoMerge(prNumber, mergeStrategy);
+        }
+
+        const prStatus = statusResult.data;
+        if (!prStatus.mergeable || prStatus.mergeable_state !== 'clean') {
+          console.log(`⏸️ PR #${prNumber} はマージ可能状態ではありません`);
+          return false;
+        }
+
+        // MCP経由でマージ実行
+        console.log('🔗 MCP経由でPRマージ実行中...');
+        const mergeResult = await this.githubMCP.mergePullRequest({
+          pullNumber: prNumber,
+          mergeMethod: mergeStrategy,
+          commitTitle: `Merge PR #${prNumber}`,
+          commitMessage: `Auto-merge via GitHub MCP`
+        });
+
+        if (mergeResult.success) {
+          console.log(`✅ PR #${prNumber} のマージ成功（MCP経由）`);
+          
+          // ブランチ削除を試行
+          try {
+            await this.githubMCP.deleteBranch(`pr-${prNumber}`);
+          } catch (error) {
+            console.warn('⚠️ ブランチ削除に失敗:', error);
+          }
+          
+          return true;
+        } else {
+          console.warn('⚠️ MCP マージ失敗、Octokitでフォールバック:', mergeResult.error);
+        }
+      }
+      
+      // フォールバック: 従来のOctokit方式
+      return await this.attemptAutoMerge(prNumber, mergeStrategy);
+      
+    } catch (error) {
+      console.error(`❌ 自動マージ試行エラー: ${error}`);
+      return false;
     }
   }
 
