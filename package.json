@@ -1,0 +1,41 @@
+{
+  "name": "github-mcp-auto-git",
+  "version": "1.0.0",
+  "description": "Claude Codeサブエージェント機能を活用した自動Git操作システム",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "github-auto-git": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "keywords": ["git", "automation", "claude-code", "subagent", "github", "mcp"],
+  "author": "Claude Code Tools",
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "simple-git": "^3.20.0",
+    "@octokit/rest": "^20.0.0",
+    "chokidar": "^3.5.0",
+    "fs-extra": "^11.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",
+    "ts-node": "^10.9.0",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  }
+}
