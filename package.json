@@ -19,6 +19,14 @@
   "keywords": ["git", "automation", "claude-code", "subagent", "github", "mcp"],
   "author": "Claude Code Tools",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shinya-Reiji/github-mcp-auto-git.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Shinya-Reiji/github-mcp-auto-git/issues"
+  },
+  "homepage": "https://github.com/Shinya-Reiji/github-mcp-auto-git#readme",
   "dependencies": {
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0",

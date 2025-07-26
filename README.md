@@ -312,7 +312,7 @@ A: このツール自体は無料です。Claude Codeのライセンスについ
 ### 開発環境セットアップ
 ```bash
 # リポジトリをクローン
-git clone https://github.com/your-username/github-mcp-auto-git.git
+git clone https://github.com/Shinya-Reiji/github-mcp-auto-git.git
 cd github-mcp-auto-git
 
 # 依存関係をインストール
@@ -335,10 +335,10 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルをご確認ください�
 ## 🌟 サポート
 
 ### バグ報告・機能要望
-[GitHub Issues](https://github.com/your-username/github-mcp-auto-git/issues) でお気軽にご報告ください。
+[GitHub Issues](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) でお気軽にご報告ください。
 
 ### 質問・相談
-[GitHub Discussions](https://github.com/your-username/github-mcp-auto-git/discussions) でコミュニティに質問できます。
+[GitHub Discussions](https://github.com/Shinya-Reiji/github-mcp-auto-git/discussions) でコミュニティに質問できます。
 
 ---
 
@@ -346,10 +346,10 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルをご確認ください�
 
 **🎉 開発体験を革新する、AI駆動のGit自動化ツール 🎉**
 
-[📖 ドキュメント](https://github.com/your-username/github-mcp-auto-git#readme) • 
-[🐛 バグ報告](https://github.com/your-username/github-mcp-auto-git/issues) • 
-[💡 機能要望](https://github.com/your-username/github-mcp-auto-git/issues) • 
-[💬 質問](https://github.com/your-username/github-mcp-auto-git/discussions)
+[📖 ドキュメント](https://github.com/Shinya-Reiji/github-mcp-auto-git#readme) • 
+[🐛 バグ報告](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) • 
+[💡 機能要望](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) • 
+[💬 質問](https://github.com/Shinya-Reiji/github-mcp-auto-git/discussions)
 
 **⭐ このツールが役に立ったら、ぜひスターをお願いします！ ⭐**
 
