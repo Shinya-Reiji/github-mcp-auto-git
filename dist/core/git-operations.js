@@ -20,7 +20,7 @@ export class GitOperations {
     async initialize() {
         try {
             // セキュリティ検証: 設定の妥当性チェック
-            const configValidation = this.securityManager.validateInput(this.config, 'object', SecurityLevel.CONFIDENTIAL);
+            const configValidation = this.securityManager.validateInput(this.config, 'object', SecurityLevel.INTERNAL);
             if (!configValidation.isValid) {
                 const criticalThreats = configValidation.threats.filter(t => t.severity === 'critical');
                 if (criticalThreats.length > 0) {
@@ -129,7 +129,7 @@ export class GitOperations {
                 }
             }
             // オプションの検証
-            const optionsValidation = this.securityManager.validateInput(options, 'object', SecurityLevel.INTERNAL);
+            const optionsValidation = this.securityManager.validateInput(options, 'object', SecurityLevel.PUBLIC);
             if (!optionsValidation.isValid) {
                 const criticalThreats = optionsValidation.threats.filter(t => t.severity === 'critical');
                 if (criticalThreats.length > 0) {

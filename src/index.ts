@@ -100,11 +100,18 @@ class GitAutoMCP {
     // インタラクティブな監視パターン設定
     await this.configureWatchPatterns();
 
+    // PIDファイル作成でプロセス管理
+    await this.writePidFile();
+
     console.log('👀 ファイル監視を開始します...');
     console.log('📁 監視対象:', this.config.paths.join(', '));
     
     this.watcher = watch(this.config.paths, {
-      ignored: /node_modules/,
+      ignored: [
+        /node_modules/,
+        '**/*.pid',
+        '.github-auto-git.pid'
+      ],
       ignoreInitial: true,
       persistent: true
     });
@@ -116,7 +123,11 @@ class GitAutoMCP {
       .on('error', (error) => console.error('❌ ファイル監視エラー:', error));
 
     console.log('✅ ファイル監視が開始されました');
+    console.log(`📋 PID: ${process.pid} (プロセス監視用)`);
     console.log('💡 Ctrl+C で停止できます');
+    
+    // 定期ヘルスチェック開始
+    this.startHealthCheck();
   }
 
   private async handleFileChange(filePath: string, type: 'change' | 'add' | 'delete'): Promise<void> {
@@ -225,6 +236,36 @@ class GitAutoMCP {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
+    
+    // PIDファイルを削除
+    await this.removePidFile();
+  }
+
+  private async writePidFile(): Promise<void> {
+    try {
+      const pidFile = join(process.cwd(), '.github-auto-git.pid');
+      await fs.writeFile(pidFile, process.pid.toString());
+      console.log(`📄 PIDファイル作成: ${pidFile}`);
+    } catch (error) {
+      console.warn('⚠️ PIDファイル作成に失敗:', error);
+    }
+  }
+
+  private async removePidFile(): Promise<void> {
+    try {
+      const pidFile = join(process.cwd(), '.github-auto-git.pid');
+      await fs.unlink(pidFile);
+      console.log('🗑️ PIDファイルを削除しました');
+    } catch (error) {
+      // PIDファイルが存在しない場合は無視
+    }
+  }
+
+  private startHealthCheck(): void {
+    // 30秒ごとにヘルスチェック
+    setInterval(() => {
+      console.log(`💓 ヘルスチェック: ${new Date().toLocaleTimeString()} - 監視中`);
+    }, 30000);
   }
 
   private getEnabledAgents(): string[] {

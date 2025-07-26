@@ -16,6 +16,9 @@ declare class GitAutoMCP {
     private displayDetailedResult;
     runOnce(files?: string[]): Promise<void>;
     stop(): Promise<void>;
+    private writePidFile;
+    private removePidFile;
+    private startHealthCheck;
     private getEnabledAgents;
     private configureWatchPatterns;
     private askQuestion;

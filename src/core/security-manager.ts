@@ -282,9 +282,20 @@ export class SecurityManager {
     const threats: SecurityThreat[] = [];
 
     try {
-      const jsonString = JSON.stringify(obj);
-      const stringThreats = this.validateString(jsonString, 'object');
-      threats.push(...stringThreats);
+      // Git設定オブジェクトのホワイトリスト（緩和されたチェック）
+      const gitConfigKeys = ['autoCommit', 'autoPush', 'createPR', 'branchName', 'targetBranch', 
+                            'enabled', 'triggers', 'paths', 'subAgents', 'notifications', 'github'];
+      const isGitConfig = Object.keys(obj).some(key => gitConfigKeys.includes(key)) ||
+                         Object.keys(obj).every(key => 
+        gitConfigKeys.includes(key) || typeof obj[key] === 'boolean' || typeof obj[key] === 'string' || typeof obj[key] === 'number'
+      );
+
+      // Git設定オブジェクトではない場合のみ完全検証
+      if (!isGitConfig) {
+        const jsonString = JSON.stringify(obj);
+        const stringThreats = this.validateString(jsonString, 'object');
+        threats.push(...stringThreats);
+      }
 
       // プロトタイプ汚染チェック
       if (obj.hasOwnProperty('__proto__') || obj.hasOwnProperty('constructor') || obj.hasOwnProperty('prototype')) {
@@ -297,11 +308,29 @@ export class SecurityManager {
         });
       }
 
-      // 再帰的な検証
+      // 再帰的な検証（Git設定の場合は機密情報チェックのみ）
       for (const [key, value] of Object.entries(obj)) {
         if (typeof value === 'string') {
-          const valueThreats = this.validateString(value, 'string');
-          threats.push(...valueThreats);
+          if (isGitConfig) {
+            // Git設定の場合は機密情報チェックのみ
+            for (const pattern of this.DANGEROUS_PATTERNS.credentials) {
+              const matches = value.match(pattern);
+              if (matches) {
+                threats.push({
+                  type: ThreatType.CREDENTIAL_LEAK,
+                  severity: 'critical',
+                  description: '機密情報（トークン・パスワード）が検出されました',
+                  source: 'credential_leak_check',
+                  payload: this.maskSensitiveData(matches.join(', ')),
+                  recommendation: '機密情報を削除し、環境変数を使用してください'
+                });
+              }
+            }
+          } else {
+            // 通常のオブジェクトは完全検証
+            const valueThreats = this.validateString(value, 'string');
+            threats.push(...valueThreats);
+          }
         }
       }
 

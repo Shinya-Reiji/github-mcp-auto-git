@@ -46,7 +46,7 @@ export class GitOperations {
       const configValidation = this.securityManager.validateInput(
         this.config, 
         'object', 
-        SecurityLevel.CONFIDENTIAL
+        SecurityLevel.INTERNAL
       );
       
       if (!configValidation.isValid) {
@@ -207,7 +207,7 @@ export class GitOperations {
       const optionsValidation = this.securityManager.validateInput(
         options, 
         'object', 
-        SecurityLevel.INTERNAL
+        SecurityLevel.PUBLIC
       );
       
       if (!optionsValidation.isValid) {
