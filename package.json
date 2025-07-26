@@ -27,6 +27,16 @@
     "url": "https://github.com/Shinya-Reiji/github-mcp-auto-git/issues"
   },
   "homepage": "https://github.com/Shinya-Reiji/github-mcp-auto-git#readme",
+  "files": [
+    "dist/**/*",
+    "src/agents/**/*",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "dependencies": {
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0",

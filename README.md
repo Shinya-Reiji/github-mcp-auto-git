@@ -46,9 +46,20 @@ github-auto-git watch     # 監視開始
 ## 🚀 かんたんセットアップ
 
 ### 1. インストール
+
+#### オプション A: npm から（推奨）
 ```bash
 # Node.jsが必要です（https://nodejs.org/）
 npm install -g github-mcp-auto-git
+```
+
+#### オプション B: GitHubから直接
+```bash
+git clone https://github.com/Shinya-Reiji/github-mcp-auto-git.git
+cd github-mcp-auto-git
+npm install
+npm run build
+npm link  # グローバルにリンク
 ```
 
 ### 2. 初期設定
