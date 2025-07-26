@@ -3,6 +3,7 @@ import { join } from 'path';
 import { promises as fs } from 'fs';
 import { watch } from 'chokidar';
 import { config } from 'dotenv';
+import * as readline from 'readline';
 import { GitOperations } from './core/git-operations.js';
 config();
 class GitAutoMCP {
@@ -77,7 +78,10 @@ class GitAutoMCP {
             console.log('⏸️ システムが無効になっています');
             return;
         }
+        // インタラクティブな監視パターン設定
+        await this.configureWatchPatterns();
         console.log('👀 ファイル監視を開始します...');
+        console.log('📁 監視対象:', this.config.paths.join(', '));
         this.watcher = watch(this.config.paths, {
             ignored: /node_modules/,
             ignoreInitial: true,
@@ -191,6 +195,45 @@ class GitAutoMCP {
         if (this.config.subAgents.prManagementAgent.enabled)
             agents.push('PR Management Agent');
         return agents;
+    }
+    async configureWatchPatterns() {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        console.log('\n🔧 監視設定');
+        console.log('現在の監視パターン:', this.config.paths.join(', '));
+        const answer = await this.askQuestion(rl, '\n📁 監視したいフォルダ/ファイルを指定してください:\n' +
+            '  1. 現在のまま (src/**/*)\n' +
+            '  2. プロジェクト全体 (**/*)\n' +
+            '  3. カスタム設定\n' +
+            '選択 (1-3): ');
+        switch (answer) {
+            case '1':
+                // 現在の設定をそのまま使用
+                break;
+            case '2':
+                this.config.paths = ['**/*', '!node_modules/**', '!.git/**', '!dist/**', '!build/**'];
+                console.log('✅ プロジェクト全体を監視対象に設定しました');
+                break;
+            case '3':
+                const customPath = await this.askQuestion(rl, 'カスタムパターンを入力してください (例: src/**/*,*.md): ');
+                const patterns = customPath.split(',').map(p => p.trim()).filter(p => p.length > 0);
+                this.config.paths = [...patterns, '!node_modules/**', '!.git/**'];
+                console.log('✅ カスタムパターンを設定しました:', patterns.join(', '));
+                break;
+            default:
+                console.log('🔄 デフォルト設定を使用します');
+                break;
+        }
+        rl.close();
+    }
+    askQuestion(rl, question) {
+        return new Promise((resolve) => {
+            rl.question(question, (answer) => {
+                resolve(answer.trim());
+            });
+        });
     }
     getStatus() {
         return {

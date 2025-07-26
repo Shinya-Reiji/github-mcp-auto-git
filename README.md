@@ -33,7 +33,7 @@ git push
 ```bash
 # 1. 最初に一度だけ設定
 github-auto-git init      # 設定ファイル作成
-github-auto-git watch     # 監視開始
+github-auto-git watch     # ⭐ 監視開始（メイン機能）
 
 # 2. 後はファイルを保存するだけ！
 # → AIが自動的に以下を実行:
@@ -86,10 +86,12 @@ GITHUB_TOKEN=GitHubトークン
 
 > 💡 **重要**: OpenAI APIキーは不要です！Claude Codeの組み込み機能を使用します。
 
-### 4. 監視開始
+### 4. 監視開始（推奨・メイン機能）
 ```bash
 github-auto-git watch
 ```
+
+**⭐ これがメインの使い方です！** ファイルを保存するたびに自動でGit操作が実行されます。
 
 これで完了！後はファイルを編集・保存するだけです。
 
@@ -97,7 +99,7 @@ github-auto-git watch
 
 | コマンド | 説明 | 使用例 |
 |---------|------|--------|
-| `watch` | ファイル監視を開始（推奨） | `github-auto-git watch` |
+| `watch` | ⭐ **ファイル監視を開始（推奨・メイン機能）** | `github-auto-git watch` |
 | `commit` | 手動でGit操作実行 | `github-auto-git commit` |
 | `commit [files]` | 特定ファイルのみコミット | `github-auto-git commit src/app.js` |
 | `status` | システム状態を表示 | `github-auto-git status` |
@@ -348,8 +350,6 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルをご確認ください�
 ### バグ報告・機能要望
 [GitHub Issues](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) でお気軽にご報告ください。
 
-### 質問・相談
-[GitHub Discussions](https://github.com/Shinya-Reiji/github-mcp-auto-git/discussions) でコミュニティに質問できます。
 
 ---
 
@@ -359,8 +359,7 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルをご確認ください�
 
 [📖 ドキュメント](https://github.com/Shinya-Reiji/github-mcp-auto-git#readme) • 
 [🐛 バグ報告](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) • 
-[💡 機能要望](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues) • 
-[💬 質問](https://github.com/Shinya-Reiji/github-mcp-auto-git/discussions)
+[💡 機能要望](https://github.com/Shinya-Reiji/github-mcp-auto-git/issues)
 
 **⭐ このツールが役に立ったら、ぜひスターをお願いします！ ⭐**
 

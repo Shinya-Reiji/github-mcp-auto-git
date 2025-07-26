@@ -17,6 +17,8 @@ declare class GitAutoMCP {
     runOnce(files?: string[]): Promise<void>;
     stop(): Promise<void>;
     private getEnabledAgents;
+    private configureWatchPatterns;
+    private askQuestion;
     getStatus(): {
         enabled: boolean;
         watching: boolean;
