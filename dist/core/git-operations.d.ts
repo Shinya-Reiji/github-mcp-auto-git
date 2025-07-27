@@ -8,7 +8,7 @@ export declare class GitOperations {
     private errorRecovery;
     private resilientExecutor;
     private securityManager;
-    private githubMCP;
+    private mcpManager;
     private constitutionalChecker;
     constructor(config: GitConfig, projectPath?: string);
     initialize(): Promise<void>;
@@ -44,5 +44,10 @@ export declare class GitOperations {
     private detectLanguage;
     private detectFramework;
     private buildSuccessMessage;
+    /**
+     * Cleanup all resources including MCP connections
+     * Fail Fast: Comprehensive cleanup with error handling
+     */
+    cleanup(): Promise<void>;
 }
 //# sourceMappingURL=git-operations.d.ts.map

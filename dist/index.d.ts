@@ -1,35 +1,9 @@
 #!/usr/bin/env node
-import { GitConfig } from './types/index.js';
-declare class GitAutoMCP {
-    private gitOps;
-    private config;
-    private watcher?;
-    private debounceTimer?;
-    private isProcessing;
-    constructor(configPath?: string);
-    private configPath?;
-    private loadConfig;
-    initialize(): Promise<void>;
-    startWatching(): Promise<void>;
-    private handleFileChange;
-    processChanges(files?: string[]): Promise<void>;
-    private displayDetailedResult;
-    runOnce(files?: string[]): Promise<void>;
-    stop(): Promise<void>;
-    private writePidFile;
-    private removePidFile;
-    private startHealthCheck;
-    private getEnabledAgents;
-    private configureWatchPatterns;
-    private askQuestion;
-    getStatus(): {
-        enabled: boolean;
-        watching: boolean;
-        processing: boolean;
-        agents: string[];
-        config: GitConfig;
-    };
-}
+/**
+ * GitHub MCP Auto Git System - Refactored Main Entry Point
+ * Modularized implementation following Constitutional AI principles
+ */
+import { GitAutoMCP } from './core/git-auto-mcp.js';
 export { GitAutoMCP };
 export default GitAutoMCP;
 //# sourceMappingURL=index.d.ts.map

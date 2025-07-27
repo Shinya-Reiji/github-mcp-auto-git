@@ -1,0 +1,59 @@
+{
+  "metrics": {
+    "projectName": "github-mcp-auto-git",
+    "version": "1.2.0",
+    "lastUpdated": "2025-07-26T14:58:51.821Z",
+    "completedTasks": 8,
+    "totalTasks": 9,
+    "completionPercentage": 89,
+    "codeQualityScore": 85,
+    "testCoverage": 75,
+    "documentationCoverage": 80,
+    "buildTime": 0,
+    "testExecutionTime": 0,
+    "deploymentTime": 0,
+    "commitsToday": 0,
+    "commitsThisWeek": 0,
+    "activeDays": 0,
+    "contributors": [
+      "current-user"
+    ],
+    "activeContributors": 1
+  },
+  "recentChanges": [
+    {
+      "id": "39db8ccd-2b64-4146-bcfa-d9757ae661d0",
+      "timestamp": "2025-07-26T14:58:51.821Z",
+      "type": "task_completed",
+      "description": "Manual progress check",
+      "impact": "medium",
+      "filesChanged": [],
+      "linesAdded": 93,
+      "linesRemoved": 88,
+      "author": "current-user",
+      "tags": [
+        "task_completed"
+      ]
+    }
+  ],
+  "milestones": {
+    "completed": [
+      "Setup wizard implementation",
+      "ReadlineInterface lifecycle fix",
+      "Constitutional AI Checker implementation"
+    ],
+    "upcoming": [
+      "Project Progress Tracker completion",
+      "Integration testing",
+      "Documentation finalization"
+    ],
+    "overdue": []
+  },
+  "insights": {
+    "productivity": "Very Low - 開発活動が停滞気味です",
+    "quality": "Good - 品質基準を満たしています",
+    "velocity": "Steady - 安定した開発速度を維持しています",
+    "recommendations": []
+  },
+  "generatedAt": "2025-07-26T14:58:51.821Z"
+}

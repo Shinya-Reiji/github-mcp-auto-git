@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { IndependentSubAgents } from './independent-subagents.js';
+import { MemoryEfficientExecutor, ExecutionTask, ExecutionResult } from './memory-efficient-executor.js';
 import { 
   SubAgent, 
   AgentResult, 
@@ -15,11 +16,20 @@ export class SubAgentManager {
   private loadedAgents: Map<string, SubAgent> = new Map();
   private independentAgents: IndependentSubAgents;
   private workingDir: string;
+  private memoryExecutor: MemoryEfficientExecutor;
 
   constructor(agentsPath: string = './src/agents', workingDir: string = process.cwd()) {
     this.agentsPath = agentsPath;
     this.workingDir = workingDir;
     this.independentAgents = new IndependentSubAgents();
+    this.memoryExecutor = new MemoryEfficientExecutor({
+      maxConcurrentTasks: 3,
+      memoryThreshold: 256, // 256MB for subagent execution
+      gcThreshold: 80,
+      priorityQueues: true,
+      adaptiveTimeout: true,
+      memoryMonitoring: true
+    });
   }
 
   async loadAgent(agentName: string): Promise<SubAgent> {
@@ -116,6 +126,12 @@ export class SubAgentManager {
     }
   }
 
+  /**
+   * Execute multiple agents in parallel with memory optimization
+   * Fail Fast: Resource validation and task prioritization
+   * Be Lazy: Memory-aware batch execution
+   * TypeScript First: Complete type safety for parallel execution
+   */
   async executeParallel<T>(
     agentExecutions: Array<{
       agentName: string;
@@ -123,15 +139,44 @@ export class SubAgentManager {
       context?: any;
     }>
   ): Promise<AgentResult[]> {
-    const promises = agentExecutions.map(execution =>
-      this.executeAgent<T>(
+    console.log(`🔄 メモリ効率化並列実行開始: ${agentExecutions.length}エージェント`);
+    
+    // Convert agent executions to memory-optimized tasks
+    const tasks: ExecutionTask<AgentResult>[] = agentExecutions.map((execution, index) => ({
+      id: `agent-${execution.agentName}-${index}`,
+      priority: this.getAgentPriority(execution.agentName),
+      timeout: this.getAgentTimeout(execution.agentName),
+      retryAttempts: 2,
+      memoryLimit: this.getAgentMemoryEstimate(execution.agentName),
+      executor: () => this.executeAgent<T>(
         execution.agentName,
         execution.userPrompt,
         execution.context
-      )
-    );
+      ),
+      cleanup: async () => {
+        // Agent-specific cleanup (e.g., close file handles, clear caches)
+        console.log(`🧹 エージェント ${execution.agentName} リソースクリーンアップ`);
+      }
+    }));
 
-    return Promise.all(promises);
+    // Execute with memory optimization
+    const results = await this.memoryExecutor.executeParallel(tasks);
+    
+    // Convert execution results back to agent results
+    return results.map(result => {
+      if (result.success && result.result) {
+        return result.result as AgentResult;
+      } else {
+        // Create fallback agent result for failed executions
+        return {
+          agentName: result.taskId.split('-')[1] || 'unknown',
+          result: null,
+          executionTime: result.executionTime,
+          confidence: 0,
+          error: result.error || 'Execution failed'
+        };
+      }
+    });
   }
 
   async analyzeSafety(context: {
@@ -226,6 +271,7 @@ export class SubAgentManager {
     const errors: string[] = [];
 
     try {
+      console.log('🚀 Git ワークフロー並列実行開始 (メモリ最適化)');
       const [safetyResult, commitResult] = await this.executeParallel([
         {
           agentName: 'git-safety-analyzer',
@@ -405,5 +451,84 @@ export class SubAgentManager {
       available,
       errors
     };
+  }
+
+  /**
+   * Add cleanup method for memory executor
+   * Fail Fast: Comprehensive cleanup with error handling
+   */
+  async cleanup(): Promise<void> {
+    try {
+      console.log('🧹 SubAgent Manager クリーンアップ中...');
+      await this.memoryExecutor.shutdown();
+      console.log('✅ SubAgent Manager クリーンアップ完了');
+    } catch (error) {
+      console.warn('⚠️ SubAgent Manager クリーンアップ失敗:', error);
+    }
+  }
+
+  /**
+   * Get memory statistics from executor
+   * Be Lazy: Efficient memory monitoring
+   */
+  getMemoryStats() {
+    return this.memoryExecutor.getMemoryStats();
+  }
+
+  /**
+   * Determine agent priority based on agent type
+   * Critical: git-safety-analyzer (security critical)
+   * High: commit-message-generator (user-facing)
+   * Medium: pr-management-agent (automation)
+   */
+  private getAgentPriority(agentName: string): 'critical' | 'high' | 'medium' | 'low' {
+    switch (agentName) {
+      case 'git-safety-analyzer':
+        return 'critical'; // Security analysis is highest priority
+      case 'commit-message-generator':
+        return 'high'; // User-facing output is high priority
+      case 'pr-management-agent':
+        return 'medium'; // Automation is medium priority
+      default:
+        return 'low';
+    }
+  }
+
+  /**
+   * Estimate timeout for agent based on complexity
+   * Safety analysis: 45s (complex file analysis)
+   * Commit message: 30s (text generation)
+   * PR management: 20s (decision making)
+   */
+  private getAgentTimeout(agentName: string): number {
+    switch (agentName) {
+      case 'git-safety-analyzer':
+        return 45000; // 45 seconds for complex analysis
+      case 'commit-message-generator':
+        return 30000; // 30 seconds for text generation
+      case 'pr-management-agent':
+        return 20000; // 20 seconds for strategy decision
+      default:
+        return 15000; // 15 seconds default
+    }
+  }
+
+  /**
+   * Estimate memory usage for agent based on typical operations
+   * Safety analysis: 64MB (file reading + analysis)
+   * Commit message: 32MB (text processing)
+   * PR management: 24MB (decision logic)
+   */
+  private getAgentMemoryEstimate(agentName: string): number {
+    switch (agentName) {
+      case 'git-safety-analyzer':
+        return 64; // MB - File analysis requires more memory
+      case 'commit-message-generator':
+        return 32; // MB - Text generation requires moderate memory
+      case 'pr-management-agent':
+        return 24; // MB - Strategy decisions require less memory
+      default:
+        return 16; // MB - Default conservative estimate
+    }
   }
 }

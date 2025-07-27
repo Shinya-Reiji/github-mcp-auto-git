@@ -16,7 +16,7 @@ import { SubAgentManager } from './subagent-manager.js';
 import { ErrorRecoverySystem, ErrorCategory, ErrorLevel } from './error-recovery.js';
 import { ResilientExecutor, ExecutionOptions } from './resilient-executor.js';
 import { SecurityManager, SecurityLevel, ValidationResult } from './security-manager.js';
-import { GitHubMCPClient, MCPPullRequestOptions, MCPMergeOptions } from './github-mcp-client.js';
+import { UnifiedMCPManager } from './unified-mcp-manager.js';
 import { ConstitutionalAIChecker } from './constitutional-ai-checker.js';
 
 // パッケージ内のエージェントディレクトリを取得
@@ -47,7 +47,7 @@ export class GitOperations {
   private errorRecovery: ErrorRecoverySystem;
   private resilientExecutor: ResilientExecutor;
   private securityManager: SecurityManager;
-  private githubMCP: GitHubMCPClient;
+  private mcpManager: UnifiedMCPManager;
   private constitutionalChecker: ConstitutionalAIChecker;
 
   constructor(config: GitConfig, projectPath: string = process.cwd()) {
@@ -62,7 +62,7 @@ export class GitOperations {
     this.errorRecovery = new ErrorRecoverySystem();
     this.resilientExecutor = new ResilientExecutor();
     this.securityManager = new SecurityManager();
-    this.githubMCP = new GitHubMCPClient(config);
+    this.mcpManager = new UnifiedMCPManager(config);
     this.constitutionalChecker = new ConstitutionalAIChecker(this.projectPath);
   }
 
@@ -105,14 +105,12 @@ export class GitOperations {
       
       console.log(`✅ Git operations initialized with ${status.available.length} sub-agents`);
       
-      // GitHub MCP クライアントの初期化（トークンがある場合のみ）
-      if (this.config.github.token) {
-        try {
-          await this.githubMCP.initialize();
-          console.log(`✅ GitHub MCP クライアント初期化完了`);
-        } catch (error) {
-          console.warn('⚠️ GitHub MCP クライアント初期化に失敗（フォールバックモードで継続）:', error);
-        }
+      // Unified MCP Manager の初期化
+      try {
+        await this.mcpManager.initialize();
+        console.log(`✅ Unified MCP Manager 初期化完了`);
+      } catch (error) {
+        console.warn('⚠️ MCP Manager 初期化に失敗（フォールバックモードで継続）:', error);
       }
     } catch (error) {
       return await this.errorRecovery.handleError(
@@ -364,11 +362,11 @@ export class GitOperations {
     targetBranch: string = 'main'
   ): Promise<{ number: number; url: string }> {
     try {
-      // GitHub MCP クライアントを優先使用
-      if (this.githubMCP.isConnected) {
-        console.log('🔗 GitHub MCP経由でPR作成中...');
+      // Unified MCP Manager を優先使用
+      if (this.mcpManager.isServerAvailable('github')) {
+        console.log('🔗 Unified MCP経由でPR作成中...');
         
-        const mcpResult = await this.githubMCP.createPullRequest({
+        const mcpResult = await this.mcpManager.createPullRequest({
           title: prManagement.prTitle,
           body: prManagement.prBody,
           head: branchName,
@@ -481,11 +479,11 @@ export class GitOperations {
     try {
       console.log(`🔀 PR #${prNumber} の自動マージを試行中...`);
       
-      // GitHub MCP クライアントを優先使用
-      if (this.githubMCP.isConnected) {
+      // Unified MCP Manager を優先使用
+      if (this.mcpManager.isServerAvailable('github')) {
         console.log('🔗 MCP経由でPR状態確認中...');
         
-        const statusResult = await this.githubMCP.getPullRequestStatus(prNumber);
+        const statusResult = await this.mcpManager.getPullRequestStatus(prNumber);
         if (!statusResult.success) {
           console.warn('⚠️ MCP PR状態確認失敗、Octokitでフォールバック');
           return await this.attemptAutoMerge(prNumber, mergeStrategy);
@@ -499,7 +497,7 @@ export class GitOperations {
 
         // MCP経由でマージ実行
         console.log('🔗 MCP経由でPRマージ実行中...');
-        const mergeResult = await this.githubMCP.mergePullRequest({
+        const mergeResult = await this.mcpManager.mergePullRequest({
           pullNumber: prNumber,
           mergeMethod: mergeStrategy,
           commitTitle: `Merge PR #${prNumber}`,
@@ -511,7 +509,7 @@ export class GitOperations {
           
           // ブランチ削除を試行
           try {
-            await this.githubMCP.deleteBranch(`pr-${prNumber}`);
+            await this.mcpManager.deleteBranch(`pr-${prNumber}`);
           } catch (error) {
             console.warn('⚠️ ブランチ削除に失敗:', error);
           }
@@ -745,5 +743,23 @@ export class GitOperations {
     }
 
     return message;
+  }
+
+  /**
+   * Cleanup all resources including MCP connections
+   * Fail Fast: Comprehensive cleanup with error handling
+   */
+  async cleanup(): Promise<void> {
+    try {
+      console.log('🧹 GitOperations リソースクリーンアップ中...');
+      
+      // Cleanup MCP Manager
+      await this.mcpManager.cleanup();
+      
+      console.log('✅ GitOperations クリーンアップ完了');
+    } catch (error) {
+      console.error('❌ GitOperations クリーンアップエラー:', error);
+      throw error;
+    }
   }
 }

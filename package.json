@@ -1,7 +1,7 @@
 {
   "name": "github-mcp-auto-git",
-  "version": "1.2.0",
-  "description": "Claude Codeサブエージェント機能を活用した自動Git操作システム",
+  "version": "3.0.0",
+  "description": "GitHub MCP Auto Git v3.0 - メモリ効率化・統合MCP・モジュール化完了の完全自動Git操作システム",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -22,7 +22,15 @@
     "claude-code",
     "subagent",
     "github",
-    "mcp"
+    "mcp",
+    "constitutional-ai",
+    "memory-optimization",
+    "safety-analyzer",
+    "commit-message-generator",
+    "pr-management",
+    "typescript-first",
+    "file-watcher",
+    "unified-mcp-manager"
   ],
   "author": "Claude Code Tools",
   "license": "MIT",
